@@ -24,6 +24,15 @@ FONT_QUESTION = ("Arial", 20, "italic")
 # Timing / delays
 FEEDBACK_DELAY_MS = 1000
 
+# Category selector
+SELECTOR_TITLE = "Choose a Category"
+SELECTOR_TITLE_FONT = ("Arial", 14, "bold")
+SELECTOR_LISTBOX_HEIGHT = 10
+SELECTOR_LISTBOX_WIDTH = 24
+SELECTOR_LISTBOX_FONT = ("Arial", 12)
+SELECTOR_BTN_TEXT = "Start Quiz  →"
+SELECTOR_BTN_FONT = ("Arial", 12, "bold")
+
 # Quiz / API
 API_URL = "https://opentdb.com/api.php"
 QUESTION_AMOUNT = 10
