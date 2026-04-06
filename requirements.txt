@@ -1,0 +1,4 @@
+requests>=2.31.0
+
+# tkinter ships with standard Python (linux: python3-tk)
+# Python 3.10+ required for X | Y union types and tuple[...] hints
