@@ -43,6 +43,7 @@ python advanced/main.py       # run the advanced build directly
 | True/False button controls | ✓ | ✓ |
 | Score and questions-remaining display | ✓ | ✓ |
 | Colour feedback (green / red) | ✓ | ✓ |
+| In-app category selection (Tkinter) | — | ✓ |
 | Keyboard shortcuts (T / F) | — | ✓ |
 | Button lock during feedback window | — | ✓ |
 | Centralised configuration (`config.py`) | — | ✓ |
@@ -52,6 +53,15 @@ python advanced/main.py       # run the advanced build directly
 ---
 
 ## 3. Controls
+
+**Category selector** *(advanced build only)*
+
+| Input | Action |
+|-------|--------|
+| Click a row | Highlight a category |
+| Double-click a row | Select category and start quiz |
+| `Enter` | Select highlighted category and start quiz |
+| Click "Start Quiz →" | Select highlighted category and start quiz |
 
 **Gameplay**
 
@@ -66,13 +76,27 @@ python advanced/main.py       # run the advanced build directly
 
 ## 4. App flow
 
-1. `data.py` / `fetch_questions()` sends a GET request to the Open Trivia Database and decodes HTML entities in the returned text.
-2. 10 True/False questions are loaded into a question bank.
+### Original
+
+1. `data.py` calls the Open Trivia Database API at import time and decodes HTML entities.
+2. 10 True/False questions from the Computers category load into a question bank.
 3. The first question appears in the canvas.
-4. You click True or False (or press `T`/`F` in the advanced build).
+4. You click True or False.
 5. The canvas flashes **green** (correct) or **red** (wrong); the score label updates immediately.
 6. After 1 second the canvas resets to white and the next question loads.
 7. Once all 10 questions are answered, "You've reached the end of the quiz." is shown and both buttons are disabled.
+
+### Advanced
+
+1. A category selector screen appears — a styled Listbox with 15 options.
+2. Pick a category (click + button, double-click, or Enter).
+3. The canvas briefly shows "Loading questions…" while the API call runs.
+4. 10 True/False questions for the chosen category load.
+5. The first question appears in the canvas.
+6. You click True or False (or press `T`/`F`).
+7. The canvas flashes **green** (correct) or **red** (wrong); the score label updates immediately.
+8. After 1 second the canvas resets to white and the next question loads.
+9. Once all 10 questions are answered, "You've reached the end of the quiz." is shown and both buttons are disabled.
 
 ---
 
@@ -91,6 +115,9 @@ The label shows `Score: X/Y — N Questions Left !` — X is the number of corre
 
 ### Advanced build only
 
+**In-app category selection**
+Before the quiz starts, a Tkinter Listbox lists 15 categories (General Knowledge, Film, Music, History, and more). Choosing "Any" sends no filter, returning a random mix across all categories. The selector and the quiz share the same window — no extra dialog or terminal prompt.
+
 **Keyboard shortcuts**
 Press `T` for True and `F` for False. No mouse required once the window has focus.
 
@@ -98,13 +125,13 @@ Press `T` for True and `F` for False. No mouse required once the window has focu
 Both answer buttons are disabled the instant you submit an answer and re-enabled only when the next question loads. This prevents accidental double-submissions during the 1-second feedback window.
 
 **Centralised configuration**
-All magic numbers — canvas dimensions, colours, fonts, timing, and API parameters — live in a single `config.py`. Changing the feedback delay or question count requires editing exactly one line.
+All magic numbers — canvas dimensions, colours, fonts, timing, API parameters, and selector styling — live in a single `config.py`. Changing the feedback delay or question count requires editing exactly one line.
 
 **Clean UI / logic separation**
 `Display` owns every widget and has no knowledge of quiz rules. `QuizBrain` contains all game logic and has no tkinter imports. `main.py` wires the two together exclusively via callbacks.
 
 **Lazy API call**
-The original `data.py` runs the HTTP request at import time. The advanced `data.py` wraps it in `fetch_questions()`, so the call only fires when `main()` explicitly invokes it.
+The original `data.py` runs the HTTP request at import time. The advanced `data.py` wraps it in `fetch_questions(category)`, so the call only fires once the user has picked a category.
 
 ---
 
@@ -120,13 +147,49 @@ python menu.py
 └── q  ──────────────►  exit
 ```
 
-### In-app flow
+### In-app flow — original
+
+```
+[App Start → API fetch]
+     │
+     ▼
+┌─────────────────────────┐
+│   Question displayed    │◄──────────────────────┐
+└─────────────────────────┘                       │
+     │                                             │
+  Click ✓/✗                                        │
+     │                                             │
+     ▼                                             │
+[Feedback: canvas green or red, score updates]     │
+     │                                             │
+  after 1 second                                   │
+     │                                             │
+     ├── questions remain ──────────────────────────┘
+     │
+     └── no questions left
+               │
+               ▼
+     [Quiz Over: buttons disabled]
+```
+
+### In-app flow — advanced
 
 ```
 [App Start]
      │
      ▼
-[API Fetch → 10 questions loaded]
+┌──────────────────────────────────┐
+│   Category Selector Screen       │
+│   Listbox (15 options)           │
+│   "Start Quiz →" button          │
+└──────────────────────────────────┘
+     │
+  click / double-click / Enter
+     │
+     ▼
+[Canvas: "Loading questions…"]
+     │
+  API fetch (after 50 ms render delay)
      │
      ▼
 ┌─────────────────────────┐
@@ -180,7 +243,7 @@ gui-quiz-app/
     ├── config.py               # All constants — zero magic numbers elsewhere
     ├── question_model.py       # Question dataclass — pure logic, no tkinter
     ├── quiz_brain.py           # QuizBrain — pure logic, no tkinter
-    ├── data.py                 # fetch_questions() — lazy API call, no tkinter
+    ├── data.py                 # fetch_questions(category) — lazy API call, no tkinter
     └── display.py              # Display class — all tkinter, no quiz logic
 ```
 
@@ -218,7 +281,7 @@ gui-quiz-app/
 
 | Function | Returns | Description |
 |----------|---------|-------------|
-| `fetch_questions()` | `list[dict]` | Calls the Open Trivia DB API and returns a list of `{question, correct_answer}` dicts with HTML entities decoded |
+| `fetch_questions(category=0)` | `list[dict]` | Calls the Open Trivia DB API for the given category ID (0 = any) and returns decoded `{question, correct_answer}` dicts |
 
 ### `advanced/quiz_brain.py` — class `QuizBrain`
 
@@ -233,8 +296,9 @@ gui-quiz-app/
 
 | Method | Returns | Description |
 |--------|---------|-------------|
-| `__init__(on_true, on_false)` | — | Builds the Tk window and all widgets; binds `T`/`F` keys; stores callbacks |
-| `render_question(text, score, answered, total)` | `None` | Resets canvas to white, shows new question, updates score label, re-enables buttons |
+| `__init__(on_category_select)` | — | Builds the Tk window; shows the category selector screen |
+| `start_quiz(on_true, on_false)` | `None` | Stores answer callbacks; binds `T`/`F` keys; called by `main.py` after questions are fetched |
+| `render_question(text, score, answered, total)` | `None` | Resets canvas to white, shows new question text, updates score label, re-enables buttons |
 | `render_feedback(is_correct, score, answered, total, on_done)` | `None` | Flashes canvas green/red, updates score label, schedules `on_done` after `FEEDBACK_DELAY_MS` |
 | `render_quiz_over(score, total)` | `None` | Shows end message, updates final score label, disables both buttons |
 | `close()` | `None` | Calls `sys.exit(0)` |
@@ -263,14 +327,50 @@ All constants live in [advanced/config.py](advanced/config.py).
 | `FONT_SCORE` | `("Arial", 12, "bold")` | Score label font |
 | `FONT_QUESTION` | `("Arial", 20, "italic")` | Question text font |
 | `FEEDBACK_DELAY_MS` | `1000` | How long feedback colour is shown before advancing (ms) |
+| `SELECTOR_TITLE` | `"Choose a Category"` | Heading text on the category selector screen |
+| `SELECTOR_TITLE_FONT` | `("Arial", 14, "bold")` | Font for the selector heading |
+| `SELECTOR_LISTBOX_HEIGHT` | `10` | Number of visible rows in the category Listbox |
+| `SELECTOR_LISTBOX_WIDTH` | `24` | Character width of the category Listbox |
+| `SELECTOR_LISTBOX_FONT` | `("Arial", 12)` | Font for Listbox rows |
+| `SELECTOR_BTN_TEXT` | `"Start Quiz  →"` | Label on the start button |
+| `SELECTOR_BTN_FONT` | `("Arial", 12, "bold")` | Font for the start button |
+| `CATEGORIES` | *(dict, 15 entries)* | Ordered mapping of display name → Open Trivia DB category ID; `0` = any |
 | `API_URL` | `"https://opentdb.com/api.php"` | Open Trivia Database endpoint |
 | `QUESTION_AMOUNT` | `10` | Number of questions fetched per session |
 | `QUESTION_TYPE` | `"boolean"` | Open Trivia DB question type (`"boolean"` = True/False) |
-| `QUESTION_CATEGORY` | `18` | Open Trivia DB category ID (18 = Computers) |
 
 ---
 
 ## 10. Display layout
+
+### Category selector screen *(advanced build only)*
+
+```
+┌──────────────────────────────────────────┐
+│  (bg=#375362, padx=20, pady=20)           │
+│                                           │
+│         "Choose a Category"               │
+│         (Arial 14 bold, white)            │
+│                                           │
+│  ┌────────────────────────┬─┐             │
+│  │ Any                    │▲│             │
+│  │ General Knowledge      │ │             │
+│  │ Books                  │ │  Listbox    │
+│  │ Film                   │ │  10 rows    │
+│  │ Music                  │ │  visible,   │
+│  │ Television             │ │  scrollable │
+│  │ Video Games            │ │             │
+│  │ Science & Nature       │ │             │
+│  │ Computers              │▼│             │
+│  └────────────────────────┴─┘             │
+│                                           │
+│         [ Start Quiz  → ]                 │
+│         (white btn, theme text)           │
+│                                           │
+└──────────────────────────────────────────┘
+```
+
+### Quiz screen
 
 ```
 ┌──────────────────────────────────────────┐
@@ -309,19 +409,25 @@ All constants live in [advanced/config.py](advanced/config.py).
 Isolating every widget inside `Display` means quiz logic can be tested without ever spinning up a Tk window. If the GUI toolkit changes, only `display.py` needs to be rewritten — nothing in `quiz_brain.py` or `data.py` is affected.
 
 **`config.py` — zero magic numbers**
-Every number, colour string, and API parameter has a name and lives in one file. Changing the feedback delay, question count, or category requires editing exactly one constant.
+Every number, colour string, and API parameter has a name and lives in one file. Changing the feedback delay, question count, or selector height requires editing exactly one constant.
 
-**Callbacks injected via `__init__`**
-`Display` receives `on_true` and `on_false` at construction time and never imports `QuizBrain`. It knows nothing about what the callbacks do — it just calls them when a button is pressed. This fully decouples the display layer from the quiz logic.
+**`on_category_select` callback drives the two-phase startup**
+`Display.__init__` receives a single `on_category_select` callback instead of quiz callbacks. Once the user picks a category, that callback runs in `main.py`, fetches questions, builds the `QuizBrain`, then calls `display.start_quiz(on_true, on_false)`. This keeps `Display` unaware of quiz logic at both startup and runtime.
+
+**`root.after(50, ...)` for the loading state**
+After the selector is hidden, the quiz widgets are gridded with "Loading questions…" on the canvas. The actual API call is then scheduled with a 50 ms delay so tkinter has one render cycle to paint the loading text before the blocking network request freezes the event loop. The result: the user sees visible feedback instantly.
+
+**Category selector in the same window, not a separate dialog**
+Using `Toplevel` for category selection would create a second window and complicate focus management. Instead, the selector frame and quiz widgets share the same root window — the frame is removed from the grid when the quiz starts, and the quiz widgets are gridded in its place. No extra window is ever opened.
 
 **`fetch_questions()` function vs module-level execution**
-The original `data.py` fires the API request at import time, which means it runs even during tooling, testing, or accidental imports. Wrapping it in `fetch_questions()` makes the call explicit, lazy, and easy to mock in tests.
+The original `data.py` fires the API request at import time, which means it runs even during tooling, testing, or accidental imports. Wrapping it in `fetch_questions(category)` makes the call explicit, lazy, and tied to the user's category choice.
 
 **Button lock during feedback**
 Both buttons are disabled the moment an answer is submitted and re-enabled only inside `render_question()`. Without this, clicking rapidly during the 1-second feedback window would call `check_answer()` twice on the same question, corrupting the score.
 
 **`sys.path.insert` pattern**
-`advanced/main.py` inserts its own directory at the front of `sys.path` so sibling imports (`from display import Display`) resolve correctly whether the file is run directly (`python advanced/main.py`) or launched via `menu.py` with a different working directory.
+`advanced/main.py` inserts its own directory at the front of `sys.path` so sibling imports (`from display import Display`) resolve correctly whether the file is run directly or via `menu.py` with a different working directory.
 
 **`subprocess.run` + `cwd=`**
 `menu.py` sets `cwd=str(path.parent)` when launching each build so the child process's working directory matches the source file's location, keeping any remaining relative-path assumptions intact.
@@ -352,6 +458,9 @@ The advanced build extends into:
 
 - Model-View separation (pure-logic modules vs. UI module)
 - Dependency injection via constructor callbacks
+- Multi-phase UI startup (selector screen → quiz screen in one window)
+- `Listbox` with scrollbar and keyboard navigation
+- Blocking network calls inside a tkinter event loop and how to give visual feedback first
 - Centralised configuration
 - Defensive UI patterns (button locking, keyboard shortcuts)
 - Lazy vs. eager execution at module import time
