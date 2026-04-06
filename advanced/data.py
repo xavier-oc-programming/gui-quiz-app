@@ -2,15 +2,16 @@ import html
 
 import requests
 
-from config import API_URL, QUESTION_AMOUNT, QUESTION_TYPE, QUESTION_CATEGORY
+from config import API_URL, QUESTION_AMOUNT, QUESTION_TYPE
 
 
-def fetch_questions() -> list[dict]:
-    parameters = {
+def fetch_questions(category: int = 0) -> list[dict]:
+    parameters: dict[str, str | int] = {
         "amount": QUESTION_AMOUNT,
         "type": QUESTION_TYPE,
-        "category": QUESTION_CATEGORY,
     }
+    if category:
+        parameters["category"] = category
     response = requests.get(API_URL, params=parameters)
     response.raise_for_status()
     data = response.json()

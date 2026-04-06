@@ -28,4 +28,22 @@ FEEDBACK_DELAY_MS = 1000
 API_URL = "https://opentdb.com/api.php"
 QUESTION_AMOUNT = 10
 QUESTION_TYPE = "boolean"
-QUESTION_CATEGORY = 18  # 18 = Computers
+
+# Available categories (0 = any / no filter)
+CATEGORIES: dict[str, int] = {
+    "Any": 0,
+    "General Knowledge": 9,
+    "Books": 10,
+    "Film": 11,
+    "Music": 12,
+    "Television": 14,
+    "Video Games": 15,
+    "Science & Nature": 17,
+    "Computers": 18,
+    "Mathematics": 19,
+    "Mythology": 20,
+    "Sports": 21,
+    "Geography": 22,
+    "History": 23,
+    "Animals": 27,
+}

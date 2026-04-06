@@ -3,14 +3,28 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 
+from config import CATEGORIES
 from data import fetch_questions
 from display import Display
 from question_model import Question
 from quiz_brain import QuizBrain
 
 
+def select_category() -> int:
+    items = list(CATEGORIES.items())
+    print("\nSelect a category:")
+    for i, (name, _) in enumerate(items, 1):
+        print(f"  {i:2}. {name}")
+    while True:
+        choice = input("\nYour choice (number): ").strip()
+        if choice.isdigit() and 1 <= int(choice) <= len(items):
+            return items[int(choice) - 1][1]
+        print("Invalid choice. Try again.")
+
+
 def main() -> None:
-    question_data = fetch_questions()
+    category = select_category()
+    question_data = fetch_questions(category)
     question_bank = [Question(q["question"], q["correct_answer"]) for q in question_data]
     quiz = QuizBrain(question_bank)
     total = len(question_bank)
